@@ -1,0 +1,6 @@
+git init
+git add -A
+git commit -m "Initial Load"
+git remote add origin ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/api-repo
+git remote -v
+git push origin master

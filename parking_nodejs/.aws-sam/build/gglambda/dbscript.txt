@@ -1,0 +1,20 @@
+create table AWS_PARKING_DEVICE_MASTER
+(
+   device_id INT NOT NULL AUTO_INCREMENT,
+   serial_number VARCHAR(50) NOT NULL,
+   asset VARCHAR(25) NOT NULL,
+   asset_type VARCHAR(25) NOT NULL,
+   location VARCHAR(50) NOT NULL,
+   meter INT NOT NULL,
+   address VARCHAR(150) NOT NULL, 
+   city VARCHAR(50) NOT NULL, 
+   state VARCHAR(30) NOT NULL, 
+   iot_birth_rule_cloud VARCHAR(150) NOT NULL,
+   iot_birth_rule_edge VARCHAR(150) NOT NULL,
+   iot_data_rule_cloud VARCHAR(150) NOT NULL,
+   iot_data_rule_edge VARCHAR(150) NOT NULL,
+   guid VARCHAR(70),
+   timestamp VARCHAR(100) NOT NULL,
+
+   PRIMARY KEY ( device_id )
+);

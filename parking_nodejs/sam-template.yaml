@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'Parking API Lambda
+
+  '
+Globals:
+  Function:
+    Timeout: 300
+    MemorySize: 1024
+Resources:
+  parkingAPIMySQL:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: parking.getAll
+      Runtime: nodejs8.10
+      AutoPublishAlias: prod
+      Environment:
+        Variables:
+          deviceStatusTable: AWS_PARKING_DEVICE_STATUS
+          deviceMasterTable: AWS_PARKING_DEVICE_MASTER
+      Policies:
+      - AWSLambdaExecute
+      - AmazonRDSReadOnlyAccess
+      - CloudWatchLogsFullAccess
+      Events:
+        GetParkingResource:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ParkingAPI
+            Path: /parking
+            Method: get
+      CodeUri: s3://sp-sam-bucket/f9f11dd46b696bcfe5c203d4b68e7a49
+  ParkingAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Test
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:*
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+            - rds:*
+            Resource: arn:aws:rds:*:*:*

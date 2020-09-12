@@ -1,0 +1,21 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Greengrass Device Lambda
+
+  '
+Globals:
+  Function:
+    Timeout: 300
+Resources:
+  gglambda:
+    Properties:
+      AutoPublishAlias: prod
+      CodeUri: gglambda
+      Environment:
+        Variables:
+          testkey: testvalue
+      Handler: device_register.handler
+      MemorySize: 1024
+      Runtime: nodejs8.10
+      Timeout: 300
+    Type: AWS::Serverless::Function
+Transform: AWS::Serverless-2016-10-31

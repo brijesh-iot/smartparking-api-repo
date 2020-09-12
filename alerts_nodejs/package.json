@@ -1,0 +1,11 @@
+{
+  "name": "alerts_nodejs",
+  "version": "1.0.0",
+  "description": "REST APIs for parking alerts data using API Gateway and Dynamodb.",
+  "main": "alerts.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Brijesh Prajapati",
+  "license": "ISC"
+}

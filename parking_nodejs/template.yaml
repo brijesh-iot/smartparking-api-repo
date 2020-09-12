@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Parking API Lambda
+
+Globals:
+  Function:
+    Timeout: 300
+
+Resources:
+
+  ParkingAPIGetAllMySQL:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: parking.getAll
+      Runtime: nodejs12.x
+      AutoPublishAlias: prod
+      Environment:
+        Variables:
+          'deviceStatusTable': 'SMART_PARKING_DEVICE_STATUS'
+          'deviceMasterTable': 'SMART_PARKING_DEVICE_MASTER'
+          'deviceAddressMpg': 'SMART_PARKING_DEVICE_ADDRESS_MPG'
+          'deviceAddressMaster': 'SMART_PARKING_ADDRESS_MASTER'
+      Policies:
+        - AWSLambdaExecute
+        - AmazonRDSReadOnlyAccess
+        - CloudWatchLogsFullAccess
+        - AmazonEC2FullAccess
+      Events:
+        GetAllParkingResource:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ParkingAPI
+            Path: /parking
+            Method: get
+        GetAllParkingByOccupancyResource:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ParkingAPI
+            Path: /parking/isoccupied/{isoccupiedValue}
+            Method: get
+
+  ParkingAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      MethodSettings:
+        - ResourcePath: /
+          HttpMethod: GET
+          MetricsEnabled: 'true'
+          DataTraceEnabled: 'true'
+          LoggingLevel: 'INFO'
+        - ResourcePath: /parking
+          HttpMethod: GET
+          MetricsEnabled: 'true'
+          DataTraceEnabled: 'true'
+          LoggingLevel: 'INFO'
+        - ResourcePath: /parking/isoccupied/{isoccupiedValue}
+          HttpMethod: GET
+          MetricsEnabled: 'true'
+          DataTraceEnabled: 'true'
+          LoggingLevel: 'INFO'
+      TracingEnabled: true
+
+  ParkingAPIGetAllMySqlLIP:
+    Type: AWS::Lambda::Permission
+    Properties:
+      SourceArn: !Join [ "", [ "arn:aws:execute-api:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":", !Ref "ParkingAPI", "/*/GET/parking" ] ]
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      FunctionName: !GetAtt ParkingAPIGetAllMySQL.Arn
+      #SourceAccount: !Ref AWS::AccountId
+
+            

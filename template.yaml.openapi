@@ -1,0 +1,235 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: IoT Edge application
+
+Parameters:
+  CoreName:
+    Description: Greengrass Core on which our resources will be deployed. Edited
+    Default: "coreName"
+    Type: String
+
+Globals:
+  Function:
+    Timeout: 300
+
+Resources:
+
+  ParkingAPIGetAllMySqlLF:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: parking_nodejs
+      Handler: parking.getAll
+      Runtime: nodejs12.x
+      AutoPublishAlias: prod
+      Environment:
+        Variables:
+          'deviceStatusTable': 'AWS_PARKING_DEVICE_STATUS'
+          'deviceMasterTable': 'AWS_PARKING_DEVICE_MASTER'
+      Policies:
+        - AWSLambdaExecute
+        - AmazonRDSReadOnlyAccess
+        - CloudWatchLogsFullAccess
+      Events:
+        GetAllParkingResource:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ParkingAPI
+            Path: /parking
+            Method: get
+        GetAllParkingByOccupancyResource:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ParkingAPI
+            Path: /parking/isoccupied/{isoccupiedValue}
+            Method: get
+
+  ParkingAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      MethodSettings:
+        - ResourcePath: /parking
+          HttpMethod: GET
+          MetricsEnabled: 'true'
+          DataTraceEnabled: 'true'
+          LoggingLevel: 'INFO'
+        - ResourcePath: /parking/isoccupied/{isoccupiedValue}
+          HttpMethod: GET
+          MetricsEnabled: 'true'
+          DataTraceEnabled: 'true'
+          LoggingLevel: 'INFO'
+      TracingEnabled: true
+      DefinitionBody:
+        openapi: 3.0.0
+        info:
+          description: |
+            AWS IoT Smart Parking public APIs for 3rd party vendors to build web/mobile applications.
+          version: "1.0.0"
+          title: AWS IoT Smart Parking
+          termsOfService: 'http://swagger.io/terms/'
+          contact:
+            email: it.brijesh@gmail.com
+          license:
+            name: Apache 2.0
+            url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+
+        servers:
+          # Added by API Auto Mocking Plugin
+          - description: SwaggerHub API Auto Mocking
+            url: https://virtserver.swaggerhub.com/temp41/petstore-lambda/1.0.0
+          - url: 'https://petstore.swagger.io/v2'
+
+        tags:
+          - name: parking
+            description: Provides details about realtime parking
+            externalDocs:
+              description: Find out more
+              url: 'http://swagger.io'
+          - name: alerts
+            description: Access to smart parking alerts & warnings
+            externalDocs:
+              description: Find out more about our store
+              url: 'http://swagger.io'
+        paths:
+          /parking:
+            get:
+              tags:
+                - parking
+              summary: Get all parking details
+              description: Data can be filter using request parameters
+              produces:
+                - application/json
+              parameters:
+                - name: zipcode
+                  in: query
+                  description: Zipcode value that need to be considered for filter
+                  required: false
+                  explode: false
+                  schema:
+                    type: integer
+                    format: int64
+              responses:
+                '200':
+                  description: successful operation
+                  #schema:
+                  #  $ref: '#/components/schemas/Empty'  #'#/components/schemas/Parkings'
+                  #headers:
+                  #  Access-Control-Allow-Origin:
+                  #    type: string
+                  #    description: URI that may access the resource
+                  #content:
+                  #  application/json:
+                  #    schema:
+                  #      type: array
+                  #      items:
+                  #        $ref: '#/components/schemas/Parking'
+                  #  application/xml:
+                  #    schema:
+                  #      type: array
+                  #      items:
+                  #        $ref: '#/components/schemas/Parking'
+                '400':
+                  description: Invalid status value
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ParkingAPIGetAllMySqlLF.Arn}/invocations"
+                #type: AWS_PROXY
+                type: aws
+                httpMethod: "POST"
+                passthroughBehavior: "when_no_match"
+                #contentHandling: "CONVERT_TO_TEXT"
+                responses:
+                  default:
+                    statusCode: "200"
+                    #responseParameters:
+                      #method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestParameters:
+                  integration.request.querystring.zipcode: "method.request.querystring.zipcode"
+
+        externalDocs:
+          description: Find out more about Swagger
+          url: 'http://swagger.io'
+
+        components:
+          schemas:
+            ParkingTime:
+              type: object
+              properties:
+                startTime:
+                  type: integer
+                  format: int64
+                endTime:
+                  type: integer
+                  format: int64
+              xml:
+                name: Parking
+            Meter:
+              type: object
+              properties:
+                number:
+                  type: integer
+                  format: int64
+                location:
+                  type: array
+                  items:
+                    type: string
+                address:
+                  type: string
+              xml:
+                name: Meter
+            Parking:
+              type: object
+              properties:
+                timestamp:
+                  type: integer
+                  format: int64
+                isOccupied:
+                  type: boolean
+                meter:
+                  $ref: '#/components/schemas/Meter'
+                parking:
+                  $ref: '#/components/schemas/ParkingTime'
+              xml:
+                name: Parking
+            Parkings:
+              type: array
+              items:
+                $ref: '#/components/schemas/Parking'
+            Empty:
+              type: object
+
+            ApiResponse:
+              type: object
+              properties:
+                code:
+                  type: integer
+                  format: int32
+                type:
+                  type: string
+                message:
+                  type: string
+
+  ParkingAPIGetAllMySqlLIP:
+    Type: AWS::Lambda::Permission
+    Properties:
+      SourceArn: !Join [ "", [ "arn:aws:execute-api:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":", !Ref "ParkingAPI", "/*/GET/parking" ] ]
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      FunctionName: !GetAtt ParkingAPIGetAllMySqlLF.Arn
+      #SourceAccount: !Ref AWS::AccountId
+
+  ApiGatewayAccountConfig:
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn:
+        Fn::ImportValue:
+          !Sub "${CoreName}-ApiGatewayServiceRoleArn"
+
+  SPApiGatewayLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 7
+
+Outputs:
+  CoreName:
+    Description: CoreName value that will be input to CloudFormation pipeline
+    Value: !Ref CoreName
